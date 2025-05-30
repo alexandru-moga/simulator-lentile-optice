@@ -1,506 +1,485 @@
-// Presentation Controller
-class PresentationController {
+class OpticalSimulation {
     constructor() {
-        this.currentSlide = 1;
-        this.totalSlides = 11;
-        this.slides = document.querySelectorAll('.slide');
-        this.prevBtn = document.getElementById('prevBtn');
-        this.nextBtn = document.getElementById('nextBtn');
-        this.progressFill = document.getElementById('progressFill');
-        this.slideCounter = document.getElementById('slideCounter');
+        this.canvas = document.getElementById('opticsCanvas');
+        this.ctx = this.canvas.getContext('2d');
         
-        this.init();
+        // Simulation parameters
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+        this.centerX = this.width / 2;
+        this.centerY = this.height / 2;
+        
+        // Optical elements
+        this.lensType = 'convergent';
+        this.focalLength = 150;
+        this.objectDistance = 200;
+        
+        // Animation state
+        this.isPlaying = true;
+        this.animationId = null;
+        this.time = 0;
+        
+        // Ray properties
+        this.rayColors = ['#ff4444', '#ffaa00', '#44ff44', '#4444ff', '#ff44ff'];
+        this.rays = [];
+        this.raySpeed = 2;
+        this.raySpacing = 30;
+        
+        // Initialize rays
+        this.initializeRays();
+        this.setupEventListeners();
+        this.updateOpticalInfo();
+        this.animate();
     }
     
-    init() {
-        this.updateUI();
-        this.bindEvents();
-        this.showSlide(1);
-    }
-    
-    bindEvents() {
-        // Button navigation
-        this.prevBtn.addEventListener('click', () => this.previousSlide());
-        this.nextBtn.addEventListener('click', () => this.nextSlide());
+    initializeRays() {
+        this.rays = [];
+        const numRays = 5;
+        const startY = this.centerY - (numRays - 1) * this.raySpacing / 2;
         
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case 'ArrowLeft':
-                case 'ArrowUp':
-                    e.preventDefault();
-                    this.previousSlide();
-                    break;
-                case 'ArrowRight':
-                case 'ArrowDown':
-                case ' ': // Spacebar
-                    e.preventDefault();
-                    this.nextSlide();
-                    break;
-                case 'Home':
-                    e.preventDefault();
-                    this.goToSlide(1);
-                    break;
-                case 'End':
-                    e.preventDefault();
-                    this.goToSlide(this.totalSlides);
-                    break;
-            }
-        });
-        
-        // Swipe/touch support for mobile
-        let startX = 0;
-        let startY = 0;
-        
-        document.addEventListener('touchstart', (e) => {
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-        });
-        
-        document.addEventListener('touchend', (e) => {
-            if (!startX || !startY) return;
-            
-            const endX = e.changedTouches[0].clientX;
-            const endY = e.changedTouches[0].clientY;
-            
-            const diffX = startX - endX;
-            const diffY = startY - endY;
-            
-            // Check if it's a horizontal swipe (more horizontal than vertical)
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > 50) { // Minimum swipe distance
-                    if (diffX > 0) {
-                        // Swipe left - next slide
-                        this.nextSlide();
-                    } else {
-                        // Swipe right - previous slide
-                        this.previousSlide();
-                    }
-                }
-            }
-            
-            startX = 0;
-            startY = 0;
-        });
-    }
-    
-    nextSlide() {
-        if (this.currentSlide < this.totalSlides) {
-            this.goToSlide(this.currentSlide + 1, 'right');
+        for (let i = 0; i < numRays; i++) {
+            this.rays.push({
+                x: -50,
+                y: startY + i * this.raySpacing,
+                color: this.rayColors[i % this.rayColors.length],
+                initialY: startY + i * this.raySpacing,
+                particles: []
+            });
         }
     }
     
-    previousSlide() {
-        if (this.currentSlide > 1) {
-            this.goToSlide(this.currentSlide - 1, 'left');
-        }
-    }
-    
-    goToSlide(slideNumber, direction = 'right') {
-        if (slideNumber < 1 || slideNumber > this.totalSlides) return;
-        
-        const currentSlideElement = document.querySelector('.slide.active');
-        const nextSlideElement = document.querySelector(`.slide[data-slide="${slideNumber}"]`);
-        
-        if (!nextSlideElement) return;
-        
-        // Remove active class from current slide
-        if (currentSlideElement) {
-            currentSlideElement.classList.remove('active');
-            currentSlideElement.classList.add(direction === 'right' ? 'prev' : 'next');
-            
-            // Clean up transition classes after animation
-            setTimeout(() => {
-                currentSlideElement.classList.remove('prev', 'next');
-            }, 300);
-        }
-        
-        // Add animation class based on direction
-        nextSlideElement.classList.add(direction === 'right' ? 'slide-in-right' : 'slide-in-left');
-        
-        // Set new active slide
-        setTimeout(() => {
-            nextSlideElement.classList.add('active');
-            nextSlideElement.classList.remove('slide-in-right', 'slide-in-left');
-        }, 50);
-        
-        this.currentSlide = slideNumber;
-        this.updateUI();
-    }
-    
-    showSlide(slideNumber) {
-        // Hide all slides
-        this.slides.forEach(slide => {
-            slide.classList.remove('active');
+    setupEventListeners() {
+        // Lens type selector
+        document.querySelectorAll('input[name="lensType"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.lensType = e.target.value;
+                this.updateFocalLengthRange();
+                this.updateOpticalInfo();
+                this.initializeRays(); // Reset rays when lens type changes
+            });
         });
         
-        // Show target slide
-        const targetSlide = document.querySelector(`.slide[data-slide="${slideNumber}"]`);
-        if (targetSlide) {
-            targetSlide.classList.add('active');
-        }
+        // Focal length slider
+        const focalSlider = document.getElementById('focalLength');
+        focalSlider.addEventListener('input', (e) => {
+            let value = parseInt(e.target.value);
+            this.focalLength = this.lensType === 'divergent' ? -value : value;
+            document.getElementById('focalValue').textContent = value;
+            this.updateOpticalInfo();
+        });
         
-        this.currentSlide = slideNumber;
-        this.updateUI();
+        // Object position slider
+        const objectSlider = document.getElementById('objectPosition');
+        objectSlider.addEventListener('input', (e) => {
+            this.objectDistance = parseInt(e.target.value);
+            document.getElementById('objectValue').textContent = this.objectDistance;
+            this.updateOpticalInfo();
+        });
+        
+        // Play/pause button
+        document.getElementById('playPause').addEventListener('click', () => {
+            this.toggleAnimation();
+        });
+        
+        // Reset button
+        document.getElementById('reset').addEventListener('click', () => {
+            this.reset();
+        });
     }
     
-    updateUI() {
-        // Update progress bar
-        const progressPercent = (this.currentSlide / this.totalSlides) * 100;
-        this.progressFill.style.width = `${progressPercent}%`;
+    updateFocalLengthRange() {
+        const focalSlider = document.getElementById('focalLength');
+        const currentValue = Math.abs(this.focalLength);
         
-        // Update slide counter
-        this.slideCounter.textContent = `${this.currentSlide} / ${this.totalSlides}`;
+        focalSlider.min = 50;
+        focalSlider.max = 300;
+        focalSlider.value = currentValue;
         
-        // Update button states
-        this.prevBtn.disabled = this.currentSlide === 1;
-        this.nextBtn.disabled = this.currentSlide === this.totalSlides;
+        this.focalLength = this.lensType === 'divergent' ? -currentValue : currentValue;
+        document.getElementById('focalValue').textContent = currentValue;
+    }
+    
+    toggleAnimation() {
+        this.isPlaying = !this.isPlaying;
+        const playPauseText = document.getElementById('playPauseText');
+        const button = document.getElementById('playPause');
         
-        // Update button text for last slide
-        if (this.currentSlide === this.totalSlides) {
-            this.nextBtn.textContent = 'Sfârșit';
+        if (this.isPlaying) {
+            playPauseText.textContent = 'Oprește';
+            button.classList.remove('btn--secondary');
+            button.classList.add('btn--primary');
+            this.animate();
         } else {
-            this.nextBtn.textContent = 'Următor →';
+            playPauseText.textContent = 'Pornește';
+            button.classList.remove('btn--primary');
+            button.classList.add('btn--secondary');
+            if (this.animationId) {
+                cancelAnimationFrame(this.animationId);
+                this.animationId = null;
+            }
+        }
+    }
+    
+    reset() {
+        // Stop animation temporarily
+        const wasPlaying = this.isPlaying;
+        this.isPlaying = false;
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
         }
         
-        // Update button text for first slide
-        if (this.currentSlide === 1) {
-            this.prevBtn.textContent = 'Început';
+        // Reset parameters
+        this.time = 0;
+        this.lensType = 'convergent';
+        this.focalLength = 150;
+        this.objectDistance = 200;
+        
+        // Reset UI
+        document.querySelector('input[value="convergent"]').checked = true;
+        document.getElementById('focalLength').value = 150;
+        document.getElementById('objectPosition').value = 200;
+        document.getElementById('focalValue').textContent = '150';
+        document.getElementById('objectValue').textContent = '200';
+        
+        // Reset rays
+        this.initializeRays();
+        this.updateOpticalInfo();
+        
+        // Restart animation if it was playing
+        if (wasPlaying) {
+            this.isPlaying = true;
+            this.animate();
         } else {
-            this.prevBtn.textContent = '← Anterior';
+            // Draw one frame to show reset state
+            this.drawFrame();
+        }
+        
+        // Update play/pause button
+        const playPauseText = document.getElementById('playPauseText');
+        const button = document.getElementById('playPause');
+        if (this.isPlaying) {
+            playPauseText.textContent = 'Oprește';
+            button.classList.remove('btn--secondary');
+            button.classList.add('btn--primary');
+        } else {
+            playPauseText.textContent = 'Pornește';
+            button.classList.remove('btn--primary');
+            button.classList.add('btn--secondary');
         }
     }
-}
-
-// Slide Content Enhancers
-class SlideEnhancers {
-    constructor() {
-        this.init();
-    }
     
-    init() {
-        this.enhanceFormulas();
-        this.enhanceAnimations();
-        this.enhanceAccessibility();
-    }
-    
-    enhanceFormulas() {
-        // Add hover effects to formulas
-        const formulas = document.querySelectorAll('.formula');
-        formulas.forEach(formula => {
-            formula.addEventListener('mouseenter', () => {
-                formula.style.transform = 'scale(1.05)';
-                formula.style.boxShadow = '0 8px 25px rgba(50, 184, 198, 0.3)';
-            });
-            
-            formula.addEventListener('mouseleave', () => {
-                formula.style.transform = 'scale(1)';
-                formula.style.boxShadow = 'none';
-            });
-        });
-    }
-    
-    enhanceAnimations() {
-        // Add subtle animations to interactive elements
-        const interactiveElements = document.querySelectorAll('.toc-item, .app-item, .variable-item');
+    updateOpticalInfo() {
+        // Update focal length display
+        document.getElementById('infoFocal').textContent = `${Math.abs(this.focalLength)} px`;
         
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
+        // Calculate image properties using lens equation: 1/f = 1/do + 1/di
+        const f = this.focalLength;
+        const do_ = this.objectDistance;
         
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
-        
-        interactiveElements.forEach((element, index) => {
-            element.style.opacity = '0';
-            element.style.transform = 'translateY(20px)';
-            element.style.transition = `all 0.6s ease ${index * 0.1}s`;
-            observer.observe(element);
-        });
-    }
-    
-    enhanceAccessibility() {
-        // Add ARIA labels and roles
-        const slides = document.querySelectorAll('.slide');
-        slides.forEach((slide, index) => {
-            slide.setAttribute('role', 'tabpanel');
-            slide.setAttribute('aria-label', `Slide ${index + 1} of ${slides.length}`);
-        });
-        
-        // Add semantic structure
-        const headings = document.querySelectorAll('.slide h2, .slide h3');
-        headings.forEach(heading => {
-            heading.setAttribute('tabindex', '0');
-        });
-        
-        // Enhance navigation buttons
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        
-        prevBtn.setAttribute('aria-label', 'Go to previous slide');
-        nextBtn.setAttribute('aria-label', 'Go to next slide');
-    }
-}
-
-// Slide-specific functionality
-class SlideSpecificFeatures {
-    constructor(presentationController) {
-        this.presentation = presentationController;
-        this.init();
-    }
-    
-    init() {
-        this.enhanceComparisonTable();
-        this.enhanceExercises();
-        this.addSlideSpecificAnimations();
-    }
-    
-    enhanceComparisonTable() {
-        const comparisonRows = document.querySelectorAll('.comparison-row');
-        comparisonRows.forEach((row, index) => {
-            row.addEventListener('mouseenter', () => {
-                row.style.backgroundColor = 'rgba(50, 184, 198, 0.1)';
-                row.style.transform = 'scale(1.02)';
-            });
-            
-            row.addEventListener('mouseleave', () => {
-                row.style.backgroundColor = 'transparent';
-                row.style.transform = 'scale(1)';
-            });
-        });
-    }
-    
-    enhanceExercises() {
-        const solutions = document.querySelectorAll('.solution');
-        solutions.forEach(solution => {
-            const parent = solution.parentElement;
-            const toggleBtn = document.createElement('button');
-            toggleBtn.textContent = 'Afișează soluția';
-            toggleBtn.className = 'btn btn--secondary';
-            toggleBtn.style.marginTop = '16px';
-            
-            // Initially hide solutions
-            solution.style.display = 'none';
-            
-            toggleBtn.addEventListener('click', () => {
-                if (solution.style.display === 'none') {
-                    solution.style.display = 'block';
-                    solution.style.animation = 'slideInRight 0.3s ease';
-                    toggleBtn.textContent = 'Ascunde soluția';
-                } else {
-                    solution.style.display = 'none';
-                    toggleBtn.textContent = 'Afișează soluția';
-                }
-            });
-            
-            parent.insertBefore(toggleBtn, solution);
-        });
-    }
-    
-    addSlideSpecificAnimations() {
-        // Add entrance animations for slide 1 (title slide)
-        const titleSlide = document.querySelector('.slide[data-slide="1"]');
-        if (titleSlide) {
-            const titleElements = titleSlide.querySelectorAll('.slide-title, .subtitle, .lens-illustration, .author');
-            titleElements.forEach((element, index) => {
-                element.style.opacity = '0';
-                element.style.transform = 'translateY(30px)';
+        try {
+            if (Math.abs(f) > 0.1 && Math.abs(do_ - f) > 0.1) {
+                const di = (f * do_) / (do_ - f);
+                const magnification = -di / do_;
                 
-                setTimeout(() => {
-                    element.style.transition = 'all 0.8s ease';
-                    element.style.opacity = '1';
-                    element.style.transform = 'translateY(0)';
-                }, index * 300);
-            });
-        }
-    }
-}
-
-// Utility functions
-class PresentationUtils {
-    static addFullscreenSupport() {
-        // Add fullscreen toggle
-        const fullscreenBtn = document.createElement('button');
-        fullscreenBtn.innerHTML = '⛶';
-        fullscreenBtn.className = 'nav-btn';
-        fullscreenBtn.style.position = 'fixed';
-        fullscreenBtn.style.top = '20px';
-        fullscreenBtn.style.right = '20px';
-        fullscreenBtn.style.zIndex = '1001';
-        fullscreenBtn.setAttribute('aria-label', 'Toggle fullscreen');
-        
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.log('Fullscreen not supported:', err);
-                });
+                // Determine image type
+                let imageType = '';
+                if (this.lensType === 'convergent') {
+                    if (do_ > Math.abs(f)) {
+                        imageType = di > 0 ? 'Reală, Inversată' : 'Virtuală, Dreaptă';
+                    } else {
+                        imageType = 'Virtuală, Dreaptă, Mărită';
+                    }
+                } else {
+                    imageType = 'Virtuală, Dreaptă, Micșorată';
+                }
+                
+                document.getElementById('imageType').textContent = imageType;
+                document.getElementById('magnification').textContent = `${magnification.toFixed(2)}x`;
             } else {
-                document.exitFullscreen();
+                document.getElementById('imageType').textContent = 'La infinit';
+                document.getElementById('magnification').textContent = '∞';
             }
-        });
-        
-        document.body.appendChild(fullscreenBtn);
-    }
-    
-    static addPrintSupport() {
-        // Add print styles and functionality
-        const printBtn = document.createElement('button');
-        printBtn.innerHTML = '🖨';
-        printBtn.className = 'nav-btn';
-        printBtn.style.position = 'fixed';
-        printBtn.style.top = '20px';
-        printBtn.style.right = '80px';
-        printBtn.style.zIndex = '1001';
-        printBtn.setAttribute('aria-label', 'Print presentation');
-        
-        printBtn.addEventListener('click', () => {
-            window.print();
-        });
-        
-        document.body.appendChild(printBtn);
-    }
-    
-    static addKeyboardShortcutsHelp() {
-        let helpVisible = false;
-        
-        document.addEventListener('keydown', (e) => {
-            if (e.key === '?' || e.key === 'h') {
-                e.preventDefault();
-                this.toggleHelp();
-            }
-            if (e.key === 'Escape' && helpVisible) {
-                this.hideHelp();
-            }
-        });
-    }
-    
-    static toggleHelp() {
-        let helpModal = document.getElementById('helpModal');
-        
-        if (!helpModal) {
-            helpModal = this.createHelpModal();
+        } catch (error) {
+            document.getElementById('imageType').textContent = 'Eroare calcul';
+            document.getElementById('magnification').textContent = '--';
         }
+    }
+    
+    drawLens() {
+        const lensX = this.centerX;
+        const lensWidth = 8;
+        const lensHeight = 150;
         
-        if (helpModal.style.display === 'block') {
-            this.hideHelp();
+        this.ctx.strokeStyle = '#32b8c6';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        
+        if (this.lensType === 'convergent') {
+            // Convex lens - thicker in the middle
+            this.ctx.moveTo(lensX - lensWidth/2, this.centerY - lensHeight/2);
+            this.ctx.quadraticCurveTo(lensX + lensWidth, this.centerY - lensHeight/3, lensX - lensWidth/2, this.centerY);
+            this.ctx.quadraticCurveTo(lensX + lensWidth, this.centerY + lensHeight/3, lensX - lensWidth/2, this.centerY + lensHeight/2);
+            
+            this.ctx.moveTo(lensX + lensWidth/2, this.centerY - lensHeight/2);
+            this.ctx.quadraticCurveTo(lensX - lensWidth, this.centerY - lensHeight/3, lensX + lensWidth/2, this.centerY);
+            this.ctx.quadraticCurveTo(lensX - lensWidth, this.centerY + lensHeight/3, lensX + lensWidth/2, this.centerY + lensHeight/2);
         } else {
-            this.showHelp();
+            // Concave lens - thinner in the middle
+            this.ctx.moveTo(lensX - lensWidth/2, this.centerY - lensHeight/2);
+            this.ctx.quadraticCurveTo(lensX - lensWidth - 10, this.centerY, lensX - lensWidth/2, this.centerY + lensHeight/2);
+            
+            this.ctx.moveTo(lensX + lensWidth/2, this.centerY - lensHeight/2);
+            this.ctx.quadraticCurveTo(lensX + lensWidth + 10, this.centerY, lensX + lensWidth/2, this.centerY + lensHeight/2);
         }
+        
+        this.ctx.stroke();
+        
+        // Draw optical axis
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, this.centerY);
+        this.ctx.lineTo(this.width, this.centerY);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
     }
     
-    static createHelpModal() {
-        const modal = document.createElement('div');
-        modal.id = 'helpModal';
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-        `;
+    drawFocalPoints() {
+        const f = Math.abs(this.focalLength);
         
-        const content = document.createElement('div');
-        content.style.cssText = `
-            background: #1a365d;
-            color: #FCFCF9;
-            padding: 32px;
-            border-radius: 12px;
-            border: 2px solid #32B8C6;
-            max-width: 500px;
-            text-align: left;
-        `;
+        // Draw focal points
+        this.ctx.strokeStyle = '#32b8c6';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([3, 3]);
         
-        content.innerHTML = `
-            <h3 style="color: #32B8C6; margin-bottom: 20px;">Scurtături tastatură</h3>
-            <div style="line-height: 1.8;">
-                <div><strong>→</strong> sau <strong>Space</strong> - Slide-ul următor</div>
-                <div><strong>←</strong> - Slide-ul anterior</div>
-                <div><strong>Home</strong> - Primul slide</div>
-                <div><strong>End</strong> - Ultimul slide</div>
-                <div><strong>?</strong> sau <strong>h</strong> - Afișează acest ajutor</div>
-                <div><strong>Esc</strong> - Închide ajutorul</div>
-            </div>
-            <button id="closeHelp" style="
-                background: #32B8C6;
-                color: #FCFCF9;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 6px;
-                margin-top: 20px;
-                cursor: pointer;
-            ">Închide</button>
-        `;
+        // Left focal point
+        this.ctx.beginPath();
+        this.ctx.arc(this.centerX - f, this.centerY, 8, 0, 2 * Math.PI);
+        this.ctx.stroke();
         
-        modal.appendChild(content);
-        document.body.appendChild(modal);
+        // Right focal point
+        this.ctx.beginPath();
+        this.ctx.arc(this.centerX + f, this.centerY, 8, 0, 2 * Math.PI);
+        this.ctx.stroke();
         
-        // Close button functionality
-        document.getElementById('closeHelp').addEventListener('click', () => {
-            this.hideHelp();
-        });
+        this.ctx.setLineDash([]);
         
-        // Close on background click
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.hideHelp();
+        // Add labels
+        this.ctx.fillStyle = '#32b8c6';
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('F', this.centerX - f, this.centerY - 15);
+        this.ctx.fillText('F\'', this.centerX + f, this.centerY - 15);
+    }
+    
+    calculateRefractedRay(rayY, rayX) {
+        const lensX = this.centerX;
+        const f = this.focalLength;
+        
+        if (rayX < lensX - 10) {
+            // Before lens - ray travels straight
+            return { x: rayX, y: rayY, dx: this.raySpeed, dy: 0 };
+        } else if (rayX >= lensX - 10 && rayX <= lensX + 10) {
+            // At the lens - continue straight but prepare for refraction
+            return { x: rayX, y: rayY, dx: this.raySpeed, dy: 0 };
+        } else {
+            // After lens - apply refraction
+            const heightAtLens = rayY - this.centerY;
+            
+            if (this.lensType === 'convergent') {
+                // Convergent lens: parallel rays converge to focal point
+                const focalPointX = lensX + Math.abs(f);
+                const focalPointY = this.centerY;
+                
+                const dx = focalPointX - rayX;
+                const dy = focalPointY - rayY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    return {
+                        x: rayX,
+                        y: rayY,
+                        dx: (dx / distance) * this.raySpeed,
+                        dy: (dy / distance) * this.raySpeed
+                    };
+                }
+            } else {
+                // Divergent lens: rays appear to come from virtual focal point
+                const virtualFocalX = lensX + f; // f is negative for divergent
+                const virtualFocalY = this.centerY;
+                
+                const dx = rayX - virtualFocalX;
+                const dy = rayY - virtualFocalY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    return {
+                        x: rayX,
+                        y: rayY,
+                        dx: (dx / distance) * this.raySpeed,
+                        dy: (dy / distance) * this.raySpeed
+                    };
+                }
             }
-        });
+        }
         
-        return modal;
+        return { x: rayX, y: rayY, dx: this.raySpeed, dy: 0 };
     }
     
-    static showHelp() {
-        const helpModal = document.getElementById('helpModal');
-        if (helpModal) {
-            helpModal.style.display = 'flex';
-            helpVisible = true;
-        }
+    updateRays() {
+        if (!this.isPlaying) return;
+        
+        this.rays.forEach(ray => {
+            // Add new particle at the source periodically
+            if (this.time % 15 === 0) {
+                ray.particles.push({
+                    x: -50,
+                    y: ray.initialY,
+                    dx: this.raySpeed,
+                    dy: 0,
+                    age: 0
+                });
+            }
+            
+            // Update existing particles
+            ray.particles.forEach(particle => {
+                const refracted = this.calculateRefractedRay(particle.y, particle.x);
+                particle.x = refracted.x + refracted.dx;
+                particle.y = refracted.y + refracted.dy;
+                particle.dx = refracted.dx;
+                particle.dy = refracted.dy;
+                particle.age++;
+            });
+            
+            // Remove particles that are off-screen or too old
+            ray.particles = ray.particles.filter(particle => 
+                particle.x < this.width + 100 && particle.age < 400 && 
+                particle.y > -50 && particle.y < this.height + 50
+            );
+        });
     }
     
-    static hideHelp() {
-        const helpModal = document.getElementById('helpModal');
-        if (helpModal) {
-            helpModal.style.display = 'none';
-            helpVisible = false;
-        }
+    drawRays() {
+        this.rays.forEach(ray => {
+            // Draw ray trail
+            if (ray.particles.length > 1) {
+                this.ctx.strokeStyle = ray.color;
+                this.ctx.lineWidth = 2;
+                this.ctx.globalAlpha = 0.6;
+                this.ctx.beginPath();
+                this.ctx.moveTo(ray.particles[0].x, ray.particles[0].y);
+                
+                for (let i = 1; i < ray.particles.length; i++) {
+                    this.ctx.lineTo(ray.particles[i].x, ray.particles[i].y);
+                }
+                
+                this.ctx.stroke();
+                this.ctx.globalAlpha = 1.0;
+            }
+            
+            // Draw particles with glow effect
+            ray.particles.forEach((particle, index) => {
+                const alpha = Math.max(0.3, 1 - particle.age / 400);
+                this.ctx.globalAlpha = alpha;
+                this.ctx.fillStyle = ray.color;
+                this.ctx.shadowColor = ray.color;
+                this.ctx.shadowBlur = 8;
+                this.ctx.beginPath();
+                this.ctx.arc(particle.x, particle.y, 2, 0, 2 * Math.PI);
+                this.ctx.fill();
+                this.ctx.shadowBlur = 0;
+                this.ctx.globalAlpha = 1.0;
+            });
+        });
+    }
+    
+    drawProjector() {
+        // Draw light source/projector on the left
+        this.ctx.fillStyle = '#ffdd44';
+        this.ctx.shadowColor = '#ffdd44';
+        this.ctx.shadowBlur = 15;
+        this.ctx.beginPath();
+        this.ctx.arc(30, this.centerY, 12, 0, 2 * Math.PI);
+        this.ctx.fill();
+        this.ctx.shadowBlur = 0;
+        
+        // Projector body
+        this.ctx.fillStyle = '#555';
+        this.ctx.fillRect(5, this.centerY - 20, 30, 40);
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(35, this.centerY - 8, 12, 16);
+        
+        // Projector label
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = '10px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('SURSA', 20, this.centerY + 35);
+    }
+    
+    drawScreen() {
+        // Draw screen/detector on the right
+        this.ctx.strokeStyle = '#888';
+        this.ctx.lineWidth = 6;
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.width - 40, this.centerY - 80);
+        this.ctx.lineTo(this.width - 40, this.centerY + 80);
+        this.ctx.stroke();
+        
+        // Screen base
+        this.ctx.fillStyle = '#444';
+        this.ctx.fillRect(this.width - 50, this.centerY + 70, 20, 15);
+        
+        // Screen label
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = '10px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('ECRAN', this.width - 40, this.centerY + 100);
+    }
+    
+    drawFrame() {
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        
+        // Draw all components
+        this.drawProjector();
+        this.drawScreen();
+        this.drawLens();
+        this.drawFocalPoints();
+        this.drawRays();
+    }
+    
+    animate() {
+        if (!this.isPlaying) return;
+        
+        this.drawFrame();
+        this.updateRays();
+        
+        this.time++;
+        this.animationId = requestAnimationFrame(() => this.animate());
     }
 }
 
-// Initialize the presentation when DOM is loaded
+// Initialize the simulation when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize main presentation controller
-    const presentation = new PresentationController();
+    const simulation = new OpticalSimulation();
     
-    // Initialize slide enhancers
-    new SlideEnhancers();
+    // Handle canvas resize
+    window.addEventListener('resize', () => {
+        const canvas = document.getElementById('opticsCanvas');
+        const container = canvas.parentElement;
+        const rect = container.getBoundingClientRect();
+        
+        // Maintain aspect ratio while fitting container
+        const maxWidth = Math.min(800, rect.width - 32);
+        const aspectRatio = 800 / 400;
+        const newHeight = maxWidth / aspectRatio;
+        
+        canvas.style.width = maxWidth + 'px';
+        canvas.style.height = newHeight + 'px';
+    });
     
-    // Initialize slide-specific features
-    new SlideSpecificFeatures(presentation);
-    
-    // Add utility features
-    PresentationUtils.addFullscreenSupport();
-    PresentationUtils.addPrintSupport();
-    PresentationUtils.addKeyboardShortcutsHelp();
-    
-    // Add loading animation
-    document.body.style.opacity = '0';
-    setTimeout(() => {
-        document.body.style.transition = 'opacity 0.5s ease';
-        document.body.style.opacity = '1';
-    }, 100);
-    
-    console.log('📊 Presentare despre lentile inițializată cu succes!');
-    console.log('💡 Apasă "?" pentru a vedea scurtăturile de tastatură');
+    // Initial resize
+    window.dispatchEvent(new Event('resize'));
 });

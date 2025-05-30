@@ -3,362 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lentilele Convergente și Divergente</title>
+    <title>Simulare Lentile Optice</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="presentation-container">
-        <!-- Progress Bar -->
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-        </div>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Simulare Lentile Optice</h1>
+            <p>Demonstrarea comportamentului lentilelor convergente și divergente</p>
+        </header>
 
-        <!-- Slide Container -->
-        <div class="slide-container" id="slideContainer">
-            
-            <!-- Slide 1: Title -->
-            <div class="slide active" data-slide="1">
-                <div class="slide-content">
-                    <h1 class="slide-title">Lentilele Convergente și Divergente</h1>
-                    <div class="subtitle">Principiile fundamentale ale opticii</div>
-                    <div class="lens-illustration">
-                        <svg width="400" height="200" viewBox="0 0 400 200">
-                            <!-- Convergent lens -->
-                            <path d="M80 50 Q100 70 80 150" stroke="#32B8C6" stroke-width="3" fill="none"/>
-                            <path d="M120 50 Q100 70 120 150" stroke="#32B8C6" stroke-width="3" fill="none"/>
-                            <!-- Light rays for convergent -->
-                            <line x1="20" y1="60" x2="80" y2="80" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="20" y1="100" x2="80" y2="100" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="20" y1="140" x2="80" y2="120" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="120" y1="80" x2="160" y2="100" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="120" y1="100" x2="160" y2="100" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="120" y1="120" x2="160" y2="100" stroke="#FFC185" stroke-width="2"/>
-                            
-                            <!-- Divergent lens -->
-                            <path d="M280 50 Q260 70 280 150" stroke="#B4413C" stroke-width="3" fill="none"/>
-                            <path d="M320 50 Q340 70 320 150" stroke="#B4413C" stroke-width="3" fill="none"/>
-                            <!-- Light rays for divergent -->
-                            <line x1="220" y1="80" x2="280" y2="80" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="220" y1="100" x2="280" y2="100" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="220" y1="120" x2="280" y2="120" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="320" y1="80" x2="380" y2="60" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="320" y1="100" x2="380" y2="100" stroke="#FFC185" stroke-width="2"/>
-                            <line x1="320" y1="120" x2="380" y2="140" stroke="#FFC185" stroke-width="2"/>
-                            
-                            <!-- Labels -->
-                            <text x="100" y="180" text-anchor="middle" fill="#FCFCF9" font-size="14">Convergentă</text>
-                            <text x="300" y="180" text-anchor="middle" fill="#FCFCF9" font-size="14">Divergentă</text>
-                        </svg>
-                    </div>
-                    <div class="author">Prezentare interactivă despre optică</div>
+        <main class="app-main">
+            <div class="simulation-area">
+                <canvas id="opticsCanvas" width="800" height="400"></canvas>
+                
+                <div class="focal-markers">
+                    <div id="leftFocal" class="focal-point left-focal"></div>
+                    <div id="rightFocal" class="focal-point right-focal"></div>
                 </div>
             </div>
 
-            <!-- Slide 2: Cuprins -->
-            <div class="slide" data-slide="2">
-                <div class="slide-content">
-                    <h2>Cuprins</h2>
-                    <div class="toc-list">
-                        <div class="toc-item">1. Introducere în optică și lentile</div>
-                        <div class="toc-item">2. Lentilele convergente (convexe)</div>
-                        <div class="toc-item">3. Lentilele divergente (concave)</div>
-                        <div class="toc-item">4. Comparația între tipurile de lentile</div>
-                        <div class="toc-item">5. Formulele matematice</div>
-                        <div class="toc-item">6. Aplicații practice</div>
-                        <div class="toc-item">7. Exerciții și exemple</div>
-                        <div class="toc-item">8. Concluzii</div>
+            <aside class="controls-panel">
+                <div class="control-section">
+                    <h3>Tipul Lentilei</h3>
+                    <div class="lens-selector">
+                        <label class="radio-option">
+                            <input type="radio" name="lensType" value="convergent" checked>
+                            <span class="radio-custom"></span>
+                            Convergentă (Convexă)
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="lensType" value="divergent">
+                            <span class="radio-custom"></span>
+                            Divergentă (Concavă)
+                        </label>
                     </div>
                 </div>
-            </div>
 
-            <!-- Slide 3: Introducere -->
-            <div class="slide" data-slide="3">
-                <div class="slide-content">
-                    <h2>Introducere în Optică și Lentile</h2>
-                    <div class="intro-content">
-                        <div class="intro-text">
-                            <h3>Ce sunt lentilele?</h3>
-                            <p>Lentilele sunt corpuri transparente, de obicei din sticlă sau plastic, care au cel puțin o suprafață curbă și sunt folosite pentru a refracta lumina.</p>
-                            
-                            <h3>Tipuri principale:</h3>
-                            <ul>
-                                <li><strong>Lentile convergente (convexe)</strong> - convergă razele de lumină</li>
-                                <li><strong>Lentile divergente (concave)</strong> - divergă razele de lumină</li>
-                            </ul>
-                            
-                            <h3>Principiul fizic:</h3>
-                            <p>Funcționarea lentilelor se bazează pe fenomenul de <strong>refracție</strong> - schimbarea direcției razelor de lumină când trec dintr-un mediu în altul.</p>
-                        </div>
-                        <div class="intro-image">
-                            <img src="https://pplx-res.cloudinary.com/image/upload/v1748592703/pplx_project_search_images/4e90554b9e29a4040b753f8676550f031b666135.jpg" alt="Camera lens" style="width: 100%; border-radius: 8px;">
+                <div class="control-section">
+                    <h3>Distanța Focală</h3>
+                    <div class="slider-container">
+                        <input type="range" id="focalLength" min="50" max="300" value="150" class="slider">
+                        <div class="slider-value">
+                            <span id="focalValue">150</span> px
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Slide 4: Lentile Convergente -->
-            <div class="slide" data-slide="4">
-                <div class="slide-content">
-                    <h2>Lentilele Convergente (Convexe)</h2>
-                    <div class="lens-details">
-                        <div class="lens-info">
-                            <h3>Definiție:</h3>
-                            <p>Lentilele convergente sunt mai groase în centru decât la margini și convergă razele de lumină paralele într-un punct focal.</p>
-                            
-                            <h3>Proprietăți:</h3>
-                            <ul>
-                                <li>Formă convexă - mai groase în centru</li>
-                                <li>Distanță focală pozitivă</li>
-                                <li>Convergă razele de lumină paralele</li>
-                                <li>Pot forma imagini reale și virtuale</li>
-                                <li>Folosite pentru corectarea hipermetropiei</li>
-                            </ul>
-                        </div>
-                        <div class="lens-diagram">
-                            <img src="https://pplx-res.cloudinary.com/image/upload/v1748592702/pplx_project_search_images/af0fd6781acc43d5132e2afa7352d474366f5ba7.jpg" alt="Convex lens forming real image" style="width: 100%; border-radius: 8px;">
+                <div class="control-section">
+                    <h3>Poziția Obiectului</h3>
+                    <div class="slider-container">
+                        <input type="range" id="objectPosition" min="50" max="350" value="200" class="slider">
+                        <div class="slider-value">
+                            <span id="objectValue">200</span> px
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Slide 5: Lentile Divergente -->
-            <div class="slide" data-slide="5">
-                <div class="slide-content">
-                    <h2>Lentilele Divergente (Concave)</h2>
-                    <div class="lens-details">
-                        <div class="lens-info">
-                            <h3>Definiție:</h3>
-                            <p>Lentilele divergente sunt mai subțiri în centru decât la margini și divergă razele de lumină paralele.</p>
-                            
-                            <h3>Proprietăți:</h3>
-                            <ul>
-                                <li>Formă concavă - mai subțiri în centru</li>
-                                <li>Distanță focală negativă</li>
-                                <li>Divergă razele de lumină paralele</li>
-                                <li>Formează doar imagini virtuale</li>
-                                <li>Folosite pentru corectarea miopiei</li>
-                            </ul>
-                        </div>
-                        <div class="lens-diagram">
-                            <img src="https://pplx-res.cloudinary.com/image/upload/v1748592702/pplx_project_search_images/c6d41c7fbdb38c6e3aca3e1763ae09f5b083bcdb.jpg" alt="Concave lens ray diagram" style="width: 100%; border-radius: 8px;">
-                        </div>
+                <div class="control-section">
+                    <h3>Controale Animație</h3>
+                    <div class="button-group">
+                        <button id="playPause" class="btn btn--primary">
+                            <span id="playPauseText">Oprește</span>
+                        </button>
+                        <button id="reset" class="btn btn--secondary">Resetează</button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Slide 6: Comparație -->
-            <div class="slide" data-slide="6">
-                <div class="slide-content">
-                    <h2>Comparația între Lentilele Convergente și Divergente</h2>
-                    <div class="comparison-table">
-                        <div class="comparison-header">
-                            <div class="comparison-col">Caracteristică</div>
-                            <div class="comparison-col convergent">Convergente (Convexe)</div>
-                            <div class="comparison-col divergent">Divergente (Concave)</div>
-                        </div>
-                        <div class="comparison-row">
-                            <div class="comparison-col">Forma</div>
-                            <div class="comparison-col">Mai groasă în centru</div>
-                            <div class="comparison-col">Mai subțire în centru</div>
-                        </div>
-                        <div class="comparison-row">
-                            <div class="comparison-col">Distanța focală</div>
-                            <div class="comparison-col">Pozitivă (+f)</div>
-                            <div class="comparison-col">Negativă (-f)</div>
-                        </div>
-                        <div class="comparison-row">
-                            <div class="comparison-col">Tipul imaginilor</div>
-                            <div class="comparison-col">Reale și virtuale</div>
-                            <div class="comparison-col">Doar virtuale</div>
-                        </div>
-                        <div class="comparison-row">
-                            <div class="comparison-col">Utilizare medicală</div>
-                            <div class="comparison-col">Hipermetropia</div>
-                            <div class="comparison-col">Miopia</div>
-                        </div>
-                        <div class="comparison-row">
-                            <div class="comparison-col">Aplicații comune</div>
-                            <div class="comparison-col">Lupele, camere foto</div>
-                            <div class="comparison-col">Ochelari pentru miopi</div>
-                        </div>
+                <div class="info-panel">
+                    <h3>Informații Optice</h3>
+                    <div class="info-item">
+                        <label>Distanța Focală:</label>
+                        <span id="infoFocal">150 px</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Tipul Imaginii:</label>
+                        <span id="imageType">Reală, Inversată</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Mărirea:</label>
+                        <span id="magnification">-0.75x</span>
                     </div>
                 </div>
-            </div>
-
-            <!-- Slide 7: Formule -->
-            <div class="slide" data-slide="7">
-                <div class="slide-content">
-                    <h2>Formulele Matematice</h2>
-                    <div class="formulas-content">
-                        <div class="formula-block">
-                            <h3>Ecuația lentilelor subțiri:</h3>
-                            <div class="formula-display">
-                                <span class="formula">1/f = 1/d₀ + 1/dᵢ</span>
-                            </div>
-                        </div>
-                        
-                        <div class="formula-block">
-                            <h3>Formula măririi:</h3>
-                            <div class="formula-display">
-                                <span class="formula">M = hᵢ/h₀ = dᵢ/d₀</span>
-                            </div>
-                        </div>
-                        
-                        <div class="variables-explanation">
-                            <h3>Explicația variabilelor:</h3>
-                            <div class="variables-grid">
-                                <div class="variable-item">
-                                    <strong>f</strong> = distanța focală
-                                </div>
-                                <div class="variable-item">
-                                    <strong>d₀</strong> = distanța obiectului
-                                </div>
-                                <div class="variable-item">
-                                    <strong>dᵢ</strong> = distanța imaginii
-                                </div>
-                                <div class="variable-item">
-                                    <strong>M</strong> = mărirea
-                                </div>
-                                <div class="variable-item">
-                                    <strong>hᵢ</strong> = înălțimea imaginii
-                                </div>
-                                <div class="variable-item">
-                                    <strong>h₀</strong> = înălțimea obiectului
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 8: Aplicații -->
-            <div class="slide" data-slide="8">
-                <div class="slide-content">
-                    <h2>Aplicații Practice</h2>
-                    <div class="applications-grid">
-                        <div class="application-category">
-                            <h3>Lentile Convergente:</h3>
-                            <div class="app-list">
-                                <div class="app-item">📷 Camere foto</div>
-                                <div class="app-item">🔬 Microscoapele</div>
-                                <div class="app-item">🔭 Telescoape</div>
-                                <div class="app-item">🔍 Lupele</div>
-                                <div class="app-item">👓 Ochelari pentru hipermetropi</div>
-                            </div>
-                        </div>
-                        
-                        <div class="application-category">
-                            <h3>Lentile Divergente:</h3>
-                            <div class="app-list">
-                                <div class="app-item">👓 Ochelari pentru miopi</div>
-                                <div class="app-item">🔭 Binocluri (în combinație)</div>
-                                <div class="app-item">🔍 Periscoape</div>
-                                <div class="app-item">📡 Telescoape (în combinație)</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="applications-image">
-                        <img src="https://pplx-res.cloudinary.com/image/upload/v1748592703/pplx_project_search_images/46a49b7c09382cc95ed0a08b5962794dbe93ad29.jpg" alt="Telescope lens diagram" style="width: 100%; max-width: 600px; border-radius: 8px;">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 9: Exerciții -->
-            <div class="slide" data-slide="9">
-                <div class="slide-content">
-                    <h2>Exerciții și Exemple Practice</h2>
-                    <div class="exercises-content">
-                        <div class="exercise-block">
-                            <h3>Exemplul 1:</h3>
-                            <p>O lentilă convergentă cu distanța focală f = 20 cm. Un obiect este plasat la 30 cm de lentilă. Calculați distanța imaginii.</p>
-                            <div class="solution">
-                                <p><strong>Soluție:</strong></p>
-                                <p>1/f = 1/d₀ + 1/dᵢ</p>
-                                <p>1/20 = 1/30 + 1/dᵢ</p>
-                                <p>1/dᵢ = 1/20 - 1/30 = 1/60</p>
-                                <p><strong>dᵢ = 60 cm</strong></p>
-                            </div>
-                        </div>
-                        
-                        <div class="exercise-block">
-                            <h3>Exemplul 2:</h3>
-                            <p>Calculați mărirea pentru exemplul de mai sus:</p>
-                            <div class="solution">
-                                <p><strong>Soluție:</strong></p>
-                                <p>M = dᵢ/d₀ = 60/30 = 2</p>
-                                <p><strong>Imaginea este mărită de 2 ori</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 10: Concluzii -->
-            <div class="slide" data-slide="10">
-                <div class="slide-content">
-                    <h2>Concluzii</h2>
-                    <div class="conclusions-content">
-                        <div class="conclusion-point">
-                            <h3>🔍 Puncte Cheie:</h3>
-                            <ul>
-                                <li>Lentilele convergente convergă lumina și au distanță focală pozitivă</li>
-                                <li>Lentilele divergente divergă lumina și au distanță focală negativă</li>
-                                <li>Ambele tipuri au aplicații importante în optică și medicină</li>
-                                <li>Formulele matematice ne permit să calculăm pozițiile și mărimile imaginilor</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="conclusion-point">
-                            <h3>💡 Importanța în viața de zi cu zi:</h3>
-                            <ul>
-                                <li>Corectarea defectelor de vedere</li>
-                                <li>Instrumente optice (camere, microscoapele, telescoape)</li>
-                                <li>Tehnologia modernă și cercetarea științifică</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 11: Referințe -->
-            <div class="slide" data-slide="11">
-                <div class="slide-content">
-                    <h2>Referințe și Resurse</h2>
-                    <div class="references-content">
-                        <div class="reference-section">
-                            <h3>📚 Surse bibliografice:</h3>
-                            <ul>
-                                <li>Halliday, Resnick, Walker - "Fundamentals of Physics"</li>
-                                <li>Manualul de fizică pentru liceu - Editura Didactică</li>
-                                <li>Young, Freedman - "University Physics"</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="reference-section">
-                            <h3>🌐 Resurse online:</h3>
-                            <ul>
-                                <li>PhET Interactive Simulations - University of Colorado</li>
-                                <li>Khan Academy - Optics course</li>
-                                <li>Science Learning Hub - Lens diagrams</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="thanks">
-                            <h3>Mulțumim pentru atenție!</h3>
-                            <p>Întrebări și discuții</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Navigation Controls -->
-        <div class="nav-controls">
-            <button class="nav-btn" id="prevBtn">← Anterior</button>
-            <span class="slide-counter" id="slideCounter">1 / 11</span>
-            <button class="nav-btn" id="nextBtn">Următor →</button>
-        </div>
+            </aside>
+        </main>
     </div>
 
     <script src="app.js"></script>
